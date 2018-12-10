@@ -18,21 +18,49 @@ Useage:
 import eplot
 import pandas as pd
 import numpy as np
-se = pd.Series(np.random.randint(10,size=100))
-df = pd.DataFrame({'mass': [0.330, 4.87 , 5.97],'radius': [2439.7, 6051.8, 6378.1]}, index=['Mercury', 'Venus', 'Earth'])
-df.eplot()
+df = pd.DataFrame([np.random.uniform(10,1,size=1000),
+                   np.random.uniform(10,5,size=1000),
+                   np.random.randint(1,high=10,size=1000),
+                   np.random.choice(list('ABCD'),size=1000)],
+                  index=['col1','col2','col3','col4']).T
 ```
 
-```python
-df.eplot.pie(y='mass')
-```
+# line
 
-```python
-se.eplot.countplot()
-```
+![line_figure](./img/line_figure.png)
 
-```python
-se.eplot.box()
-```
+# bar
+
+![](./img/bar_figure.png)
+
+# histogram
+
+![](./img/histogram_figure.png)
+
+# scatter
+
+![](./img/scatter_category_figure.png)
+
+![](./img/scatter3d_category_figure.png)
+
+
+
+# pie
+
+![](./img/pie_figure.png)
+
+# rose pie
+
+![](./img/pie_rose_figure.png)
+
+# countplot
+
+![](./img/countplot_figure.png)
+
+# box
+
+![](./img/box_figure.png)
+
+![](./img/box_series_figure.png)
 
 More examples can be found in the notebook `eplot useage example.ipynb`.
