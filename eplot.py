@@ -1,3 +1,11 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+@author:  pjgao
+@city: Nanjing
+"""
+
+
 import pandas
 import pyecharts
 import numpy as np
