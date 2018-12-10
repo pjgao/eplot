@@ -1,13 +1,16 @@
-# `eplot
-pandas interface for pyecharts
+# eplot
 
-pyecharts is a great python module as a wrapper for echarts, it is also simple to use in pandas by function `add` .
+`eplot` is a `pandas` interface for `pyecharts`.
+
+As we know, `pyecharts` is a great python module as a wrapper for echarts, it is  easy to use in `pandas` by function `add` .
 
 http://pyecharts.org/#/zh-cn/prepare
 
-However, it will be more simple if it can use as 
+However, it will be more simple if it can be used as raw `pandas`  plot module, eg: `df.plot.bar()`.
 
-Impired by `cufflinks` to `plotly`, I create this codes for the smoothly useage in `pandas` , by only add functions to the `DataFrame` or `Series` object. Thus we need not to call pyecharts  or creat pyecharts objects out of the `DataFrame`
+Impired by `cufflinks` to `plotly`, I created these codes for the `pyecharts` smoothly useage in `pandas` , by only registering functions to the `DataFrame` or `Series` classes. 
+
+As a result, we need not to call pyecharts  or creat pyecharts objects out of the `DataFrame`, we plot interacted figures in the `pyecharts` backend only in one line as follow:
 
 Useage:
 
@@ -32,3 +35,4 @@ se.eplot.countplot()
 se.eplot.box()
 ```
 
+More examples can be found in the notebook `eplot useage example.ipynb`.
