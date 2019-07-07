@@ -1,84 +1,96 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-@author:  pjgao
-@city: Nanjing
-"""
-
-
 import pandas
 import pyecharts
 import numpy as np
 from pandas.core.base import PandasObject
 from pandas.core.accessor import CachedAccessor
 import pyecharts.options as opts
+from pyecharts.render.display import HTML
+from pyecharts.render.engine import RenderEngine
+from pyecharts.commons import utils
+
+def chart_render(chart):
+    chart._prepare_render()
+    require_config = utils.produce_require_dict(
+        chart.js_dependencies, chart.js_host
+    )
+    return HTML(
+        RenderEngine().render_chart_to_notebook(
+            template_name="jupyter_notebook.html",
+            charts=(chart,),
+            config_items=require_config["config_items"],
+            libraries=require_config["libraries"],))
 
 
 def bar(data, title=None, useCols=None, **args):
+    barFig = pyecharts.charts.Bar()
+    barFig.set_global_opts(title_opts=opts.TitleOpts(title=title))
     if isinstance(data, pandas.Series):
-        barFig = pyecharts.charts.Bar(title)
-        barFig.add(data.name, data.index, data.values,
-                   is_label_show=True, **args)
-        return barFig
+        barFig.add_xaxis(data.index.tolist())
+        barFig.add_yaxis(data.name, data.values.tolist())
     elif isinstance(data, pandas.DataFrame):
         useCols = useCols if useCols else data.columns
-        barFig = pyecharts.charts.Bar(title)
         for i in useCols:
-            barFig.add(i, data.index, data[i], is_label_show=True, **args)
-        return barFig
+            barFig.add_xaxis(data[i].index.tolist())
+            barFig.add_yaxis(i, data[i].values.tolist())
+    return chart_render(barFig)
 
 
 def line(data, title=None, lineConfig=None, manyLineConfig=None, useCols=None, **args):
-    if isinstance(data, pandas.Series):
-        lineConfig = lineConfig if lineConfig else {}
-        lineFig = pyecharts.charts.Line(title)
-        # lineFig.add(data.name,data.index,data.values,**lineConfig,**args)
-        lineFig.add_xaxis(data.index)
-        lineFig.add_yaxis(data.name, data.values, **lineConfig, **args)
-        return lineFig
-    if useCols is None:
-        useCols = data.columns
     lineFig = pyecharts.charts.Line()
     lineFig.set_global_opts(title_opts=opts.TitleOpts(title=title))
+    if isinstance(data, pandas.Series):
+        lineConfig = lineConfig if lineConfig else {}
 
-    if lineConfig is None:
-        manyLineConfig = {}
-    for i in useCols:
-        # lineFig.add(i, data.index, data[i],**manyLineConfig.get(i,{}))#, mark_point=["average"])
-        lineFig.add_xaxis(data.index)\
-            .add_yaxis(i, data[i], **manyLineConfig.get(i, {}))
-    return lineFig
+        lineFig.add_xaxis(data.index.tolist())
+        lineFig.add_yaxis(data.name, data.values.tolist(),
+                          **lineConfig, **args)
+    elif isinstance(data, pandas.DataFrame):
+        if useCols is None:
+            useCols = data.columns
+        if lineConfig is None:
+            manyLineConfig = {}
+        for i in useCols:
+            lineFig.add_xaxis(data.index.tolist())\
+                .add_yaxis(i, data[i].tolist(), **manyLineConfig.get(i, {}))
+    lineFig.set_series_opts(label_opts=opts.LabelOpts(is_show=False))
+    return chart_render(lineFig)
 
 
 def pie(data, y=None, title=None, **args):
-    pieFig = pyecharts.charts.Pie(title)
+    pieFig = pyecharts.charts.Pie()
+    pieFig.set_global_opts(title_opts=opts.TitleOpts(title=title))
     if isinstance(data, pandas.Series):
-        pieFig.add(data.name, data.index, data.values, **args)
+        pieFig.add(data.name, list(zip(data.index.tolist(),
+                                       data.values.tolist())), **args)
     elif isinstance(data, pandas.DataFrame):
-        pieFig.add(y, data.index, data[y].values, **args)
-    return pieFig
+        pieFig.add(y, list(zip(data.index.tolist(),
+                               data[y].values.tolist())), **args)
+    pieFig.set_series_opts(label_opts=opts.LabelOpts(formatter="{b}: {c}"))
+    return chart_render(pieFig)
 
 
 def hist(data, title='histogram', bins=10, **args):
-    histFig = pyecharts.charts.Bar(title)
+    histFig = pyecharts.charts.Bar()
+    histFig.set_global_opts(title_opts=opts.TitleOpts(title=title))
     y, x = np.histogram(data, bins=bins)
     x = x.astype(int).astype(str)
     xlabels = [x[i-1]+'-'+x[i] for i in range(1, len(x))]
-    histFig.add(data.name, xlabels, y, bar_category_gap=1,
-                is_label_show=True, **args)
-    return histFig
+    histFig.add_xaxis(xlabels)
+    histFig.add_yaxis(data.name, y.tolist(), **args)
+    return chart_render(histFig)
 
 
 def box(data, title=None, **args):
-    boxFig = pyecharts.charts.Boxplot(title)
+    boxFig = pyecharts.charts.Boxplot()
+    boxFig.set_global_opts(title_opts=opts.TitleOpts(title=title))
     if isinstance(data, pandas.Series):
-        boxFig.add('', [data.name], boxFig.prepare_data(
-            data.values.reshape(1, -1)), **args)
-        return boxFig
+        boxFig.add_xaxis([data.name])
+        boxFig.add_yaxis('', boxFig.prepare_data(
+            data.values.reshape((1, -1)).tolist()))
     elif isinstance(data, pandas.DataFrame):
-        boxFig.add('', data.columns, boxFig.prepare_data(
-            data.T.values), xaxis_interval=0, **args)
-        return boxFig
+        boxFig.add_xaxis(data.columns.tolist())
+        boxFig.add_yaxis('', boxFig.prepare_data(data.values.T.tolist()))
+    return chart_render(boxFig)
 
 
 def countplot(data, title=None, **args):
@@ -86,13 +98,22 @@ def countplot(data, title=None, **args):
 
 
 def scatter(data, x, y, category_col=None, title=None, category_name=None, **args):
-    scatterFig = pyecharts.charts.Scatter(title)
+    scatterFig = pyecharts.charts.Scatter()
+    lineFig = pyecharts.charts.Line()
+    scatterFig.set_global_opts(title_opts=opts.TitleOpts(title=title))
     if category_col is None:
-        scatterFig.add(category_name, data[x], data[y], **args)
+        (scatterFig.add_xaxis(data[x].values.tolist())
+         .add_yaxis('', df[y].values.tolist())
+         .set_series_opts(label_opts=opts.LabelOpts(is_show=False))
+         )
     else:
         for cat, d in data.groupby(category_col):
-            scatterFig.add(cat, d[x], d[y], **args)
-    return scatterFig
+            #scatterFig.add(cat, d[x], d[y], **args)
+            (scatterFig.add_xaxis(d[x].values.tolist())
+             .add_yaxis(cat, d[y].values.tolist())
+             .set_series_opts(label_opts=opts.LabelOpts(is_show=False))
+             )
+    return chart_render(scatterFig)
 
 
 def scatter3d(data, x, y, z, category_col=None, title=None, category_name=None, **args):
@@ -153,14 +174,17 @@ class EchartsSeriesPlotMethods(EchartsBasePlotMethods):
     def line(self, title='line', **kwds):
         return self(kind='line', title=title, **kwds)
 
-    def pie(self, title='pie', legend_orient="vertical", rosetype=None, is_label_show=True, is_legend_show=True, legend_pos="right", inner_radius_from=0, **kwds):
+    def pie(self, title='pie', y=None, color=None, radius=None, center=None, rosetype=None, label_opts=None, **kwds):
+        if color is not None:
+            kwds.update({'color': color})
+        if radius is not None:
+            kwds.update({'radius': radius})
+        if center is not None:
+            kwds.update({'center': center})
         if rosetype is not None:
             kwds.update({'rosetype': rosetype})
-        kwds.update({'legend_orient': legend_orient})
-        kwds.update({'legend_pos': legend_pos})
-        kwds.update({'radius': [inner_radius_from, 75]})
-        kwds.update({'is_label_show': is_label_show})
-        kwds.update({'is_legend_show': is_legend_show})
+        if label_opts is not None:
+            kwds.update({'label_opts': label_opts})
         return self(kind='pie', title=title, **kwds)
 
     def hist(self, title='histogram', bins=10, **kwds):
@@ -186,14 +210,17 @@ class EchartsFramePlotMethods(EchartsBasePlotMethods):
     def box(self, title='box', **kwds):
         return self(kind='box', title=title, **kwds)
 
-    def pie(self, title='pie', y=None, legend_orient="vertical", rosetype=None, is_label_show=True, is_legend_show=True, legend_pos="right", inner_radius_from=0, **kwds):
+    def pie(self, title='pie', y=None, color=None, radius=None, center=None, rosetype=None, label_opts=None,  **kwds):
+        if color is not None:
+            kwds.update({'color': color})
+        if radius is not None:
+            kwds.update({'radius': radius})
+        if center is not None:
+            kwds.update({'center': center})
         if rosetype is not None:
             kwds.update({'rosetype': rosetype})
-        kwds.update({'legend_orient': legend_orient})
-        kwds.update({'legend_pos': legend_pos})
-        kwds.update({'radius': [inner_radius_from, 75]})
-        kwds.update({'is_label_show': is_label_show})
-        kwds.update({'is_legend_show': is_legend_show})
+        if label_opts is not None:
+            kwds.update({'label_opts': label_opts})
         return self(kind='pie', y=y, title=title, **kwds)
 
     def scatter(self, x, y, category_col=None, category_name=None, title='scatter'):
@@ -201,7 +228,6 @@ class EchartsFramePlotMethods(EchartsBasePlotMethods):
 
     def scatter3d(self, x, y, z, category_col=None, category_name=None, title='scatter3d'):
         return self(kind='scatter3d', x=x, y=y, z=z, category_col=category_col, category_name=category_name, title=title)
-
 
 pandas.Series.eplot = CachedAccessor("eplot", EchartsSeriesPlotMethods)
 pandas.DataFrame.eplot = CachedAccessor("eplot", EchartsFramePlotMethods)
