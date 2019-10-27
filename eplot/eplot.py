@@ -8,17 +8,17 @@ from pyecharts.render.display import HTML
 from pyecharts.render.engine import RenderEngine
 from pyecharts.commons import utils
 
-def chart_render(chart):
-    chart._prepare_render()
-    require_config = utils.produce_require_dict(
-        chart.js_dependencies, chart.js_host
-    )
-    return HTML(
-        RenderEngine().render_chart_to_notebook(
-            template_name="jupyter_notebook.html",
-            charts=(chart,),
-            config_items=require_config["config_items"],
-            libraries=require_config["libraries"],))
+Config = {'return_type': 'HTML'}
+
+
+def set_config(**kwargs):
+    '''
+  if return type is HTML, you can see the chart directly in jupyter notebook, but cannot change anymore
+  if return type is CHART, you need `df.col1.eplot.bar().render_notebook()`  in order to display in notebook.
+  '''
+    global Config
+    for i in kwargs.keys():
+        Config[i] = kwargs[i]
 
 
 def bar(data, title=None, useCols=None, **args):
@@ -32,10 +32,18 @@ def bar(data, title=None, useCols=None, **args):
         for i in useCols:
             barFig.add_xaxis(data[i].index.tolist())
             barFig.add_yaxis(i, data[i].values.tolist())
-    return chart_render(barFig)
+    result = barFig.render_notebook(
+    ) if Config['return_type'] == 'HTML' else barFig
+    return result
 
 
-def line(data, title=None, lineConfig=None, manyLineConfig=None, useCols=None, **args):
+def line(
+        data,
+        title=None,
+        lineConfig=None,
+        manyLineConfig=None,
+        useCols=None,
+        **args):
     lineFig = pyecharts.charts.Line()
     lineFig.set_global_opts(title_opts=opts.TitleOpts(title=title))
     if isinstance(data, pandas.Series):
@@ -53,7 +61,9 @@ def line(data, title=None, lineConfig=None, manyLineConfig=None, useCols=None, *
             lineFig.add_xaxis(data.index.tolist())\
                 .add_yaxis(i, data[i].tolist(), **manyLineConfig.get(i, {}))
     lineFig.set_series_opts(label_opts=opts.LabelOpts(is_show=False))
-    return chart_render(lineFig)
+    result = lineFig.render_notebook(
+    ) if Config['return_type'] == 'HTML' else lineFig
+    return result
 
 
 def pie(data, y=None, title=None, **args):
@@ -66,7 +76,9 @@ def pie(data, y=None, title=None, **args):
         pieFig.add(y, list(zip(data.index.tolist(),
                                data[y].values.tolist())), **args)
     pieFig.set_series_opts(label_opts=opts.LabelOpts(formatter="{b}: {c}"))
-    return chart_render(pieFig)
+    result = pieFig.render_notebook(
+    ) if Config['return_type'] == 'HTML' else pieFig
+    return result
 
 
 def hist(data, title='histogram', bins=10, **args):
@@ -74,10 +86,12 @@ def hist(data, title='histogram', bins=10, **args):
     histFig.set_global_opts(title_opts=opts.TitleOpts(title=title))
     y, x = np.histogram(data, bins=bins)
     x = x.astype(int).astype(str)
-    xlabels = [x[i-1]+'-'+x[i] for i in range(1, len(x))]
+    xlabels = [x[i - 1] + '-' + x[i] for i in range(1, len(x))]
     histFig.add_xaxis(xlabels)
     histFig.add_yaxis(data.name, y.tolist(), **args)
-    return chart_render(histFig)
+    result = histFig.render_notebook(
+    ) if Config['return_type'] == 'HTML' else histFig
+    return result
 
 
 def box(data, title=None, **args):
@@ -90,14 +104,23 @@ def box(data, title=None, **args):
     elif isinstance(data, pandas.DataFrame):
         boxFig.add_xaxis(data.columns.tolist())
         boxFig.add_yaxis('', boxFig.prepare_data(data.values.T.tolist()))
-    return chart_render(boxFig)
+    result = boxFig.render_notebook(
+    ) if Config['return_type'] == 'HTML' else boxFig
+    return result
 
 
 def countplot(data, title=None, **args):
     return data.value_counts().eplot.bar(title='countplot', **args)
 
 
-def scatter(data, x, y, category_col=None, title=None, category_name=None, **args):
+def scatter(
+        data,
+        x,
+        y,
+        category_col=None,
+        title=None,
+        category_name=None,
+        **args):
     scatterFig = pyecharts.charts.Scatter()
     lineFig = pyecharts.charts.Line()
     scatterFig.set_global_opts(title_opts=opts.TitleOpts(title=title))
@@ -113,17 +136,29 @@ def scatter(data, x, y, category_col=None, title=None, category_name=None, **arg
              .add_yaxis(cat, d[y].values.tolist())
              .set_series_opts(label_opts=opts.LabelOpts(is_show=False))
              )
-    return chart_render(scatterFig)
+    result = scatterFig.render_notebook(
+    ) if Config['return_type'] == 'HTML' else scatterFig
+    return result
 
 
-def scatter3d(data, x, y, z, category_col=None, title=None, category_name=None, **args):
+def scatter3d(
+        data,
+        x,
+        y,
+        z,
+        category_col=None,
+        title=None,
+        category_name=None,
+        **args):
     scatter3dFig = pyecharts.charts.Scatter3D(title)
     if category_col is None:
         scatter3dFig.add(category_name, data[[x, y, z]].values, **args)
     else:
         for cat, d in data.groupby(category_col):
             scatter3dFig.add(cat, d[[x, y, z]].values, **args)
-    return scatter3dFig
+    result = scatter3dFig.render_notebook(
+    ) if Config['return_type'] == 'HTML' else scatter3dFig
+    return result
 
 
 def eplot_series(se, kind='bar', title=None, bins=10, **kwds):
@@ -141,7 +176,16 @@ def eplot_series(se, kind='bar', title=None, bins=10, **kwds):
         return countplot(se, title=title, **kwds)
 
 
-def eplot_frame(df, kind='bar', x=None, y=None, z=None, category_col=None, category_name=None, title=None, **kwds):
+def eplot_frame(
+        df,
+        kind='bar',
+        x=None,
+        y=None,
+        z=None,
+        category_col=None,
+        category_name=None,
+        title=None,
+        **kwds):
     if kind == 'bar':
         return bar(df, title=title, **kwds)
     if kind == 'line':
@@ -151,9 +195,24 @@ def eplot_frame(df, kind='bar', x=None, y=None, z=None, category_col=None, categ
     if kind == 'pie':
         return pie(df, y=y, title=title, **kwds)
     if kind == 'scatter':
-        return scatter(df, x=x, y=y, category_col=category_col, category_name=category_name, title=title, **kwds)
+        return scatter(
+            df,
+            x=x,
+            y=y,
+            category_col=category_col,
+            category_name=category_name,
+            title=title,
+            **kwds)
     if kind == 'scatter3d':
-        return scatter3d(df, x=x, y=y, z=z, category_col=category_col, category_name=category_name, title=title, **kwds)
+        return scatter3d(
+            df,
+            x=x,
+            y=y,
+            z=z,
+            category_col=category_col,
+            category_name=category_name,
+            title=title,
+            **kwds)
 
 
 class EchartsBasePlotMethods(PandasObject):
@@ -166,7 +225,12 @@ class EchartsBasePlotMethods(PandasObject):
 
 class EchartsSeriesPlotMethods(EchartsBasePlotMethods):
     def __call__(self, kind='line', bins=10, title=None, **kwds):
-        return eplot_series(self._parent, kind=kind, title=title, bins=bins, **kwds)
+        return eplot_series(
+            self._parent,
+            kind=kind,
+            title=title,
+            bins=bins,
+            **kwds)
 
     def bar(self, title='bar', **kwds):
         return self(kind='bar', title=title, **kwds)
@@ -174,7 +238,16 @@ class EchartsSeriesPlotMethods(EchartsBasePlotMethods):
     def line(self, title='line', **kwds):
         return self(kind='line', title=title, **kwds)
 
-    def pie(self, title='pie', y=None, color=None, radius=None, center=None, rosetype=None, label_opts=None, **kwds):
+    def pie(
+            self,
+            title='pie',
+            y=None,
+            color=None,
+            radius=None,
+            center=None,
+            rosetype=None,
+            label_opts=None,
+            **kwds):
         if color is not None:
             kwds.update({'color': color})
         if radius is not None:
@@ -198,8 +271,26 @@ class EchartsSeriesPlotMethods(EchartsBasePlotMethods):
 
 
 class EchartsFramePlotMethods(EchartsBasePlotMethods):
-    def __call__(self, kind='line', x=None, y=None, z=None, category_col=None, category_name=None, title=None, **kwds):
-        return eplot_frame(self._parent, kind=kind, x=x, y=y, z=z, category_col=category_col, category_name=category_name, title=title, **kwds)
+    def __call__(
+            self,
+            kind='line',
+            x=None,
+            y=None,
+            z=None,
+            category_col=None,
+            category_name=None,
+            title=None,
+            **kwds):
+        return eplot_frame(
+            self._parent,
+            kind=kind,
+            x=x,
+            y=y,
+            z=z,
+            category_col=category_col,
+            category_name=category_name,
+            title=title,
+            **kwds)
 
     def bar(self, title='bar', **kwds):
         return self(kind='bar', title=title, **kwds)
@@ -210,7 +301,16 @@ class EchartsFramePlotMethods(EchartsBasePlotMethods):
     def box(self, title='box', **kwds):
         return self(kind='box', title=title, **kwds)
 
-    def pie(self, title='pie', y=None, color=None, radius=None, center=None, rosetype=None, label_opts=None,  **kwds):
+    def pie(
+            self,
+            title='pie',
+            y=None,
+            color=None,
+            radius=None,
+            center=None,
+            rosetype=None,
+            label_opts=None,
+            **kwds):
         if color is not None:
             kwds.update({'color': color})
         if radius is not None:
@@ -223,11 +323,38 @@ class EchartsFramePlotMethods(EchartsBasePlotMethods):
             kwds.update({'label_opts': label_opts})
         return self(kind='pie', y=y, title=title, **kwds)
 
-    def scatter(self, x, y, category_col=None, category_name=None, title='scatter'):
-        return self(kind='scatter', x=x, y=y, category_col=category_col, category_name=category_name, title=title)
+    def scatter(
+            self,
+            x,
+            y,
+            category_col=None,
+            category_name=None,
+            title='scatter'):
+        return self(
+            kind='scatter',
+            x=x,
+            y=y,
+            category_col=category_col,
+            category_name=category_name,
+            title=title)
 
-    def scatter3d(self, x, y, z, category_col=None, category_name=None, title='scatter3d'):
-        return self(kind='scatter3d', x=x, y=y, z=z, category_col=category_col, category_name=category_name, title=title)
+    def scatter3d(
+            self,
+            x,
+            y,
+            z,
+            category_col=None,
+            category_name=None,
+            title='scatter3d'):
+        return self(
+            kind='scatter3d',
+            x=x,
+            y=y,
+            z=z,
+            category_col=category_col,
+            category_name=category_name,
+            title=title)
+
 
 pandas.Series.eplot = CachedAccessor("eplot", EchartsSeriesPlotMethods)
 pandas.DataFrame.eplot = CachedAccessor("eplot", EchartsFramePlotMethods)

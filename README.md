@@ -1,6 +1,6 @@
 # eplot
 
-`eplot` is a `pandas` interface for `pyecharts`.
+`eplot` is a `pandas` interface for `pyecharts`,(now is support `pyecharts` 1.5.1 version!).
 
 As we know, `pyecharts` is a great python module as a wrapper for echarts, it is  easy to use in `pandas` by function `add` .
 
@@ -24,6 +24,18 @@ df = pd.DataFrame([np.random.uniform(10,1,size=1000),
                    np.random.choice(list('ABCD'),size=1000)],
                   index=['col1','col2','col3','col4']).T
 ```
+
+In the latest version, a function `set_config` is added, so you can use this function to decide whether HTML (which can be display in notebook directly) or pyecharts CHART(which can reuse the chart).
+
+If return type is HTML, you can see the chart directly in jupyter notebook, but cannot change anymore.
+If return type is CHART, you need `df.col1.eplot.bar().render_notebook()`  in order to display in notebook.
+
+```python
+eplot.set_config(return_type='CHART')
+eplot.set_config(return_type='HTML') # default by html
+```
+
+
 
 # line
 
