@@ -126,7 +126,7 @@ def scatter(
     scatterFig.set_global_opts(title_opts=opts.TitleOpts(title=title))
     if category_col is None:
         (scatterFig.add_xaxis(data[x].values.tolist())
-         .add_yaxis('', df[y].values.tolist())
+         .add_yaxis('', data[y].values.tolist())
          .set_series_opts(label_opts=opts.LabelOpts(is_show=False))
          )
     else:
