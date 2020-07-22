@@ -66,7 +66,7 @@ def line(
     return result
 
 
-def pie(data, y=None, title=None, **args):
+def pie(data, y=None, title=None,label_formatter="{b}: {c}({d}%)", **args):
     pieFig = pyecharts.charts.Pie()
     pieFig.set_global_opts(title_opts=opts.TitleOpts(title=title))
     if isinstance(data, pandas.Series):
@@ -75,7 +75,7 @@ def pie(data, y=None, title=None, **args):
     elif isinstance(data, pandas.DataFrame):
         pieFig.add(y, list(zip(data.index.tolist(),
                                data[y].values.tolist())), **args)
-    pieFig.set_series_opts(label_opts=opts.LabelOpts(formatter="{b}: {c}"))
+    pieFig.set_series_opts(label_opts=opts.LabelOpts(formatter=label_formatter))
     result = pieFig.render_notebook(
     ) if Config['return_type'] == 'HTML' else pieFig
     return result
